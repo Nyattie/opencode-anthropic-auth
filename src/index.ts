@@ -63,6 +63,10 @@ const blockedRefreshTokens = new Map<string, number>()
 // ambiguous. The fixed-size filter bounds memory and fails closed; its
 // false-positive probability therefore grows over the process lifetime.
 const blockedRefreshTokenFilter = new Uint8Array(BLOCKED_REFRESH_FILTER_BYTES)
+// OpenCode can dispose and recreate setup() while a request is in flight, so the
+// response may reach a newer setup than the one that aliased its tool names.
+// Ownership is therefore process-wide; alias leases stay setup-local.
+const transformedRequests = new WeakSet<Request>()
 let activeResponseTransforms = 0
 
 function acquireResponseTransform(): () => void {
@@ -311,7 +315,6 @@ export default Plugin.define({
 
     const aliasesByRequest = new WeakMap<Request, AliasLease>()
     const aliasesByFingerprint = new Map<string, AliasLease>()
-    const transformedRequests = new WeakSet<Request>()
     const ownershipKey = randomBytes(32)
     let reconstructedAliasLookups = 0
     let setupActive = true

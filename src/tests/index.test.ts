@@ -2354,6 +2354,47 @@ describe('session http.response hook', () => {
     )
   })
 
+  test('decodes a streamed tool alias when the plugin reloads mid-request', async () => {
+    const before = anthropicOAuthContext()
+    const disposeBefore = await plugin.setup(before.ctx as any)
+    const requestEvent: any = {
+      model: { providerID: 'anthropic', modelID: 'claude-3' },
+      request: new Request('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        body: JSON.stringify({ tools: [{ name: 'shell' }] }),
+      }),
+    }
+    await before.sessionHooks.get('http.request')!(requestEvent)
+    const alias = JSON.parse(await requestEvent.request.clone().text()).tools[0]
+      .name
+    await requestEvent.request.text()
+
+    ;(disposeBefore as () => void)()
+    const after = anthropicOAuthContext()
+    await plugin.setup(after.ctx as any)
+    const event = JSON.stringify({
+      type: 'content_block_start',
+      index: 0,
+      content_block: {
+        type: 'tool_use',
+        id: 'toolu_1',
+        name: alias,
+        input: {},
+      },
+    })
+    const responseEvent: any = {
+      model: requestEvent.model,
+      request: requestEvent.request,
+      response: new Response(`event: content_block_start\ndata: ${event}\n\n`, {
+        headers: { 'content-type': 'text/event-stream' },
+      }),
+    }
+
+    await after.sessionHooks.get('http.response')!(responseEvent)
+    const data = (await responseEvent.response.text()).match(/^data: (.*)$/m)
+    expect(JSON.parse(data![1]).content_block.name).toBe('shell')
+  })
+
   test('decodes and releases aliases when the request explicitly uses beta=false', async () => {
     const { ctx, sessionHooks } = anthropicOAuthContext()
     await plugin.setup(ctx as any)
