@@ -1,5 +1,11 @@
 # @ex-machina/opencode-anthropic-auth
 
+## 2.0.0-next.5
+
+### Patch Changes
+
+- [#276](https://github.com/ex-machina-co/opencode-anthropic-auth/pull/276) [`58cf3f4`](https://github.com/ex-machina-co/opencode-anthropic-auth/commit/58cf3f421c3bf7293ac1395bd1a4a3823fc2de68) Thanks [@rcdailey](https://github.com/rcdailey)! - Decode tool-name aliases when OpenCode reloads the plugin while a request is in flight. Previously the response reached a newer plugin setup that did not recognize the request, so the raw `mcp_T...` alias reached OpenCode and the tool call failed with "No tool named".
+
 ## 2.0.0-next.4
 
 ### Patch Changes
